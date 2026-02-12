@@ -1,0 +1,39 @@
+
+services:
+
+  php-fpm:
+    restart: unless-stopped
+    environment:
+      OPCACHE_ENABLE: 1
+      OPCACHE_VALIDATE: 1
+      APP_ENV: local
+      APP_DEBUG: true
+
+  nginx:
+    restart: unless-stopped
+
+  postgres:
+    restart: unless-stopped
+
+  mysql:
+    restart: unless-stopped
+
+  redis:
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+
+  scheduler:
+    restart: unless-stopped
+
+  horizon:
+    restart: unless-stopped
+
+  mailpit:
+    image: axllent/mailpit
+    ports:
+      - "8025:8025"
+      - "1025:1025"
+    networks:
+      - laravel
+    restart: unless-stopped

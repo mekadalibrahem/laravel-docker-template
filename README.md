@@ -1,2 +1,2 @@
 # laravel-docker-template
-docker files and dokcer compose to build laravel applications 
+docker and dokcer files compose to build laravel applications 

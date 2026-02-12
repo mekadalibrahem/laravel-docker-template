@@ -1,0 +1,37 @@
+
+services:
+
+  php-fpm:
+    restart: always
+    environment:
+      OPCACHE_ENABLE: 1
+      OPCACHE_VALIDATE: 0
+      APP_ENV: production
+      APP_DEBUG: false
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+  nginx:
+    restart: always
+    ports:
+      - "8085:80"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+  postgres:
+    restart: always
+
+  redis:
+    restart: always
+
+  scheduler:
+    restart: always
+
+  horizon:
+    restart: always
