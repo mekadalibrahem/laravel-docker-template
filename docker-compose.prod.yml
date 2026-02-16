@@ -1,37 +1,79 @@
-
 services:
-
-  php-fpm:
+  php:
+    build:
+      context: .
+      dockerfile: docker/php/Dockerfile
+      args:
+        - APP_ENV=production
+    image: myapp/php:prod
+    container_name: myapp-php-prod
     restart: always
     environment:
-      OPCACHE_ENABLE: 1
-      OPCACHE_VALIDATE: 0
-      APP_ENV: production
-      APP_DEBUG: false
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "5"
+      - APP_ENV=production
+      - APP_DEBUG=false
+      - CONTAINER_ROLE=app
+    volumes:
+      - app-storage:/var/www/storage
+    depends_on:
+      database:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    networks:
+      - backend
 
   nginx:
+    image: nginx:alpine
+    container_name: myapp-nginx-prod
     restart: always
+    # Typically 80/443 in prod. 8082 if you have an external reverse proxy.
     ports:
-      - "8085:80"
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "5"
+      - "8082:80" 
+    volumes:
+      # We only mount the storage for public uploads/logs
+      - app-storage:/var/www/storage:ro
+      - ./docker/webserver/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - php
+    networks:
+      - backend
 
-  postgres:
+  database:
+    image: postgres:18-alpine
+    container_name: myapp-db-prod
     restart: always
+    environment:
+      POSTGRES_DB: ${DB_DATABASE}
+      POSTGRES_USER: ${DB_USERNAME}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    # REMOVED PORTS: Never expose your DB to the public internet in production
+    command: ["postgres", "-c", "lc_messages=en_US.utf-8"]
+    volumes:
+      - db-data-prod:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME} -d ${DB_DATABASE}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - backend
 
   redis:
+    image: redis:alpine
+    container_name: myapp-redis-prod
     restart: always
+    # REMOVED PORTS: Keep Redis internal to the 'backend' network
+    command: redis-server --appendonly yes --requirepass "${REDIS_PASSWORD}"
+    volumes:
+      - redis-data-prod:/data
+    networks:
+      - backend
 
-  scheduler:
-    restart: always
+volumes:
+  app-storage:
+  db-data-prod:
+  redis-data-prod:
 
-  horizon:
-    restart: always
+networks:
+  backend:
+    driver: bridge

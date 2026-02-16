@@ -1,6 +1,0 @@
-services:
-  php-fpm:
-    environment:
-      PHP_FPM_LISTEN_MODE: "dynamic"
-    volumes:
-      - ./:/var/www:cached

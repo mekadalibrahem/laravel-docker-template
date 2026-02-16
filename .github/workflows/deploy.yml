@@ -1,0 +1,57 @@
+name: Deploy on VPS
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy via SSH to VPS
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          script: |
+            set -e
+            # Go to project folder
+            cd /var/www/html/laradock
+
+            # Pull latest code 
+            git fetch --all
+            git checkout main
+            git reset --hard origin/main
+
+            # option copy env file
+            # cp .env.production .env || echo "Using existing .env"
+            docker compose -f docker-compose.prod.yml pull database redis nginx
+            docker compose -f docker-compose.prod.yml build php
+            docker compose -f docker-compose.prod.yml up -d --build --remove-orphans
+
+            # Wait a bit for php to be ready (healthcheck helps but sometimes needed)
+            sleep 10
+
+            # Run migrations (only once per deploy - safe)
+            docker compose -f docker-compose.prod.yml exec -T php \
+              php artisan migrate --force --no-interaction || echo "Migrations skipped or nothing to do"
+
+            # Clear & cache (faster startup next time)
+            docker compose -f docker-compose.prod.yml exec -T php \
+              php artisan config:cache --no-interaction || true
+
+            docker compose -f docker-compose.prod.yml exec -T php \
+              php artisan route:cache --no-interaction || true
+
+            docker compose -f docker-compose.prod.yml exec -T php \
+              php artisan view:cache --no-interaction || true
+
+            # Optional: restart queue if you add it later
+            # docker compose -f docker-compose.prod.yml restart queue
+
+            echo "Deployment finished successfully at $(date)"

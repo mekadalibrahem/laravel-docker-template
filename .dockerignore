@@ -1,0 +1,12 @@
+.git
+.gitignore
+node_modules
+vendor
+*.log
+storage/logs/*
+storage/framework/*
+public/storage   # usually symlink
+bootstrap/cache/*
+tests/
+.idea
+.vscode
