@@ -1,12 +1,13 @@
+
 services:
   php:
     build:
       context: .
-      dockerfile: docker/php/Dockerfile
+      dockerfile: docker/php/${PHP_VERSION}/Dockerfile
       args:
         - APP_ENV=${APP_ENV:-local}
-    image: myapp/php:dev
-    container_name: myapp-php
+    image: ${PHP_IMAGE_NAME}
+    container_name: myapp-php:-${PHP_VERSION}
     restart: unless-stopped
     environment:
       - APP_ENV=${APP_ENV:-local}

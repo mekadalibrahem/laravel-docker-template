@@ -2,11 +2,11 @@ services:
   php:
     build:
       context: .
-      dockerfile: docker/php/Dockerfile
+      dockerfile: docker/php/${PHP_VERSION}/Dockerfile
       args:
         - APP_ENV=production
-    image: myapp/php:prod
-    container_name: myapp-php-prod
+    image: ${PHP_IMAGE_NAME}
+    container_name: myapp-php:-${PHP_VERSION}
     restart: always
     environment:
       - APP_ENV=production

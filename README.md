@@ -1,86 +1,116 @@
-# Laravel Docker Template with CI/CD
+# 🚀 Laravel Docker Template with CI/CD
 
-A ready-to-use **Laravel Docker template** with **GitHub Actions** and **GitLab CI/CD** deployment setup for automatic deployment to your VPS.
+A professional-grade **Laravel Docker template** featuring dynamic PHP versioning, high-performance local development, and a zero-downtime **GitHub Actions** deployment pipeline.
 
-This template includes:
+## 📂 Project Structure
 
-* Dockerized Laravel setup (PHP-FPM, Nginx, Postgres, Redis).
-* Separate `docker-compose` files for **development** and **production**.
-* Ready-to-use **CI/CD files** for GitHub and GitLab.
-* Laravel optimization commands (cache, route, view) and migrations during deploy.
-
----
-
-## 📂 Folder Structure
-
-```
+```text
 .
 ├── docker
-│   ├── cache
-│   ├── database
 │   ├── php
+│   │   └── 8.4             # Versioned PHP environments
+│   │       ├── Dockerfile
+│   │       ├── entrypoint.sh
+│   │       └── php.ini
 │   └── webserver
-├── docker-compose.dev.yml
-├── docker-compose.prod.yml
-├── docker-compose.override.yml
-├── docker-compose.yml
-├── github-ci-deploy.yml.txt       # GitHub Actions CI/CD
-├── gitlab.ci.yml.text             # GitLab CI/CD
-├── LICENSE
-└── README.md
+│       └── nginx
+│           └── default.conf
+├── docker-compose.yml       # Local Development
+├── docker-compose.prod.yml  # Production Optimized
+├── .github/workflows/       # CI/CD Workflows
+└── .env.docker              # <--- IMPORTANT: Docker-specific variables
+
 ```
 
 ---
 
-## ⚙️ How to Use
+## ⚙️ Setup Instructions
 
-1. **Copy CI/CD files**
-   Copy `github-ci-deploy.yml.txt` → `.github/workflows/deploy.yml`
-   Copy `gitlab.ci.yml.text` → `.gitlab-ci.yml`
+### 1. Environment Configuration
 
-2. **Update CI/CD names and paths**
-
-   * Change `deploy.yml` or `.gitlab-ci.yml` job names if needed.
-   * Update project path on VPS (`/var/www/laravel-app`) in scripts.
-
-3. **Set secrets / variables**
-
-   **GitHub Actions**:
-
-   * `VPS_HOST` → VPS IP
-   * `VPS_USER` → SSH username
-   * `VPS_SSH_KEY` → Private SSH key (public key in `~/.ssh/authorized_keys`)
-
-   **GitLab CI/CD**:
-
-   * `VPS_HOST` → VPS IP
-   * `VPS_USER` → SSH username
-   * `VPS_SSH_KEY` → Private SSH key
-
-4. **Optional**: Add a production `.env.docker` file on VPS.
-
-5. **Push to main branch**
-
-   * CI/CD will automatically deploy your latest Laravel code to VPS, rebuild Docker containers, run migrations, and optimize Laravel cache.
-
----
-
-## 🔹 Recommended Commands for VPS
+Laravel creates a standard `.env` file. To connect Docker and Laravel correctly, you **must** copy the variables from `.env.docker` and append them to your main `.env` file:
 
 ```bash
-cd /var/www/laravel-app
+# Append Docker variables to your Laravel .env
+cat .env.docker >> .env
+
+```
+
+**Required Variables in `.env`:**
+
+* `PHP_VERSION=8.4` (Matches the folder name in `docker/php/`)
+* `PHP_IMAGE_NAME=myapp/php:dev`
+* `DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD`
+* `REDIS_PASSWORD`
+
+### 2. Local Development
+
+Start the environment in development mode:
+
+```bash
+docker compose up -d --build
+
+```
+
+* **App:** `localhost:8082`
+* **Database:** `localhost:6543` (Mapped for GUI tools like TablePlus)
+
+### 3. Production Deployment
+
+The production setup is hardened for security (Database and Redis ports are closed to the public).
+
+**Manual Deploy:**
+
+```bash
 docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
-docker compose exec php-fpm php artisan migrate --force
-docker compose exec php-fpm php artisan config:cache
-docker compose exec php-fpm php artisan route:cache
-docker compose exec php-fpm php artisan view:cache
+
 ```
 
 ---
 
-## ⚡ Notes
+## 🤖 CI/CD Deployment (GitHub Actions)
 
-* Use `docker-compose.prod.yml` for production deployments.
+This template includes a pre-configured workflow to deploy your app to a VPS on every push to `main`.
 
+### Prerequisites
 
+1. Set up these **GitHub Secrets**:
 
+* `VPS_HOST`: Your server IP.
+* `VPS_USER`: SSH username (e.g., `root` or `ubuntu`).
+* `VPS_SSH_KEY`: Your private SSH key.
+
+2. Ensure your VPS project folder matches the path in your workflow file.
+
+### What the CI/CD does
+
+1. Pulls latest code from GitHub.
+2. Builds the PHP image locally on the VPS (leveraging Docker cache).
+3. Pulls latest Nginx, Postgres, and Redis images.
+4. Performs a **near-zero downtime swap** of containers.
+5. Automatically runs `php artisan migrate --force`.
+6. Optimizes Laravel (Config/Route/View cache).
+
+---
+
+## 🛠 Features
+
+* **Dynamic Versioning:** Change `PHP_VERSION` in `.env` to switch between `8.3`, `8.4`, etc., without touching the YAML.
+* **Healthchecks:** The PHP container waits for the Database to be "Healthy" before attempting migrations.
+* **Performance:** Uses `:cached` flags for volumes on macOS and optimized PHP-FPM configurations.
+* **Security:** Production configuration removes exposed ports for sensitive services.
+
+---
+
+## ⚡ Troubleshooting
+
+**Permission Denied on storage?**
+The `entrypoint.sh` automatically attempts to fix permissions at runtime. If issues persist, run:
+
+```bash
+docker compose exec php chown -R www-data:www-data /var/www/storage
+
+```
+
+**Database connection refused?**
+Ensure your `DB_HOST` in `.env` is set to `database` (the service name), not `127.0.0.1`.

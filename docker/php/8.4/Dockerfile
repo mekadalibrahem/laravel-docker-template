@@ -26,14 +26,14 @@ RUN pecl install -o -f redis \
     && rm -rf /tmp/pear \
     && docker-php-ext-enable redis
 
-COPY docker/php/php.ini $PHP_INI_DIR/conf.d/custom.ini
+COPY docker/php/8.4/php.ini $PHP_INI_DIR/conf.d/custom.ini
 WORKDIR /var/www
 COPY --from=vendor /app/vendor ./vendor
 COPY --from=vendor /app/composer.* ./
 COPY . .
 
 
-COPY docker/php/entrypoint.sh /usr/local/bin/entrypoint.sh
+COPY docker/php/8.4/entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 CMD ["php-fpm"]
